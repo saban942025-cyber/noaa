@@ -271,9 +271,9 @@ export default function Home() {
     }
   }, [products]);
 
-  const handleAddToCart = (product: any) => {
-    setCartCount(prev => prev + 1);
-    console.log(`Added ${product.name} to cart`);
+  const handleAddToCart = (product: any, quantity: number = 1) => {
+    setCartCount(prev => prev + (quantity || 1));
+    console.log(`Added ${quantity} of ${product?.name || 'product'} to cart`);
   };
 
   const handleQuickView = (product: any, e: React.MouseEvent) => {
@@ -372,6 +372,7 @@ export default function Home() {
         <ProductDetail 
           product={selectedProduct} 
           onBack={() => setSelectedProduct(null)} 
+          onAddToCart={handleAddToCart}
           onNextProduct={handleNextProduct}
           onPrevProduct={handlePrevProduct}
           onNavigateToProduct={(sku) => {

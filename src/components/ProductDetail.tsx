@@ -10,6 +10,7 @@ import { useInputType } from '../hooks/useInputType';
 // עדכון ה-Interface שיתאים לשדות השטוחים מה-DB שלך
 import { VideoPlayer } from './VideoPlayer';
 import { ThreeDViewer } from './ThreeDViewer';
+import { QuantityCalculator } from './QuantityCalculator';
 
 interface Product {
   id: string;
@@ -40,6 +41,7 @@ interface ProductDetailProps {
   onNavigateToProduct?: (sku: string) => void;
   onNextProduct?: () => void;
   onPrevProduct?: () => void;
+  onAddToCart?: (product: Product, quantity?: number) => void;
 }
 
 const ProductImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
@@ -117,7 +119,8 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
   onBack, 
   onNavigateToProduct,
   onNextProduct,
-  onPrevProduct 
+  onPrevProduct,
+  onAddToCart
 }) => {
   const inputType = useInputType();
   const [relatedProducts, setRelatedProducts] = React.useState<{ complementary: Product[]; upsells: Product[] }>({ complementary: [], upsells: [] });
@@ -530,6 +533,7 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   whileTap={{ scale: 0.95 }}
                   onClick={() => {
                     if (window.navigator?.vibrate) window.navigator.vibrate(50);
+                    onAddToCart?.(product, 1);
                     setTriggerProd(product);
                   }}
                   className="mt-10 w-full px-12 py-5 bg-saban-gold text-black font-black uppercase tracking-widest rounded-2xl shadow-[0_20px_50px_rgba(197,160,89,0.3)] hover:bg-white transition-all duration-300 flex items-center justify-center gap-3 group"
@@ -538,6 +542,15 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({
                   <span>הוספה לסל הקניות</span>
                 </motion.button>
               </div>
+
+              {/* מחשבון כמויות וכיסוי שטח */}
+              <QuantityCalculator 
+                product={product} 
+                onAddToCart={(qty) => {
+                  onAddToCart?.(product, qty);
+                  setTriggerProd(product);
+                }} 
+              />
 
               <div className="space-y-8 p-8 bg-current/[0.02] border border-current/5 rounded-3xl backdrop-blur-sm">
                 <h3 className="text-xl font-serif text-current flex items-center gap-3 font-bold">
