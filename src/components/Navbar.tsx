@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Menu, X, ShoppingBag, Search, Sparkles, Download, Settings, Sun, Moon, Monitor, Check } from 'lucide-react';
+import { Menu, X, ShoppingBag, Search, Sparkles, Download, Settings, Sun, Moon, Monitor, Check, Heart } from 'lucide-react';
 
 interface NavbarProps {
   onCategorySelect?: (category: string) => void;
@@ -13,6 +13,9 @@ interface NavbarProps {
   isInstallable?: boolean;
   onInstall?: () => void;
   cartCount?: number;
+  wishlistCount?: number;
+  showWishlistOnly?: boolean;
+  onWishlistToggle?: () => void;
   activeCategory?: string | null;
   activeBrand?: string | null;
   categories?: any[];
@@ -32,6 +35,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   isInstallable = false,
   onInstall = () => {},
   cartCount = 0,
+  wishlistCount = 0,
+  showWishlistOnly = false,
+  onWishlistToggle = () => {},
   activeCategory = null,
   activeBrand = null,
   categories = [],
@@ -107,6 +113,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {isSearchVisible ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
                 </button>
               </div>
+
+              {/* Wishlist Button */}
+              <button 
+                onClick={onWishlistToggle}
+                className={`relative p-2 transition-colors group drop-shadow-sm ${
+                  showWishlistOnly ? 'text-rose-500' : 'text-current hover:text-rose-500'
+                }`}
+                title="מוצרים שאהבתי (מועדפים)"
+              >
+                <Heart className={`w-5 h-5 ${showWishlistOnly || wishlistCount > 0 ? 'fill-rose-500 text-rose-500' : 'group-hover:text-rose-500'}`} />
+                <AnimatePresence>
+                  {wishlistCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      key={wishlistCount}
+                      className="absolute top-0 right-0 w-4 h-4 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border border-black shadow-sm"
+                    >
+                      {wishlistCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </button>
 
               <button className="relative p-2 text-current hover:text-saban-gold transition-colors group drop-shadow-sm">
                 <ShoppingBag className="w-5 h-5 group-hover:text-saban-gold transition-colors" />

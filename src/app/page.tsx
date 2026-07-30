@@ -10,7 +10,7 @@ import { NoaAssistant } from '@/components/NoaAssistant';
 import { AdminDashboard } from '@/components/AdminDashboard';
 import { SabanPedia } from '@/components/SabanPedia';
 import { ProductService, CategoryService, BrandService } from '@/services/firebaseService';
-import { LayoutGrid, List, Sparkles, Database, BookOpen, ImageOff, ExternalLink, Download, Home as HomeIcon, Box, Info, Tag, Settings } from 'lucide-react';
+import { LayoutGrid, List, Sparkles, Database, BookOpen, ImageOff, ExternalLink, Download, Home as HomeIcon, Box, Info, Tag, Settings, Heart } from 'lucide-react';
 import { SplashScreen } from '@/components/SplashScreen';
 import { useInputType } from '@/hooks/useInputType';
 import { useGlobalTheme } from '@/context/GlobalThemeContext';
@@ -140,6 +140,8 @@ export default function Home() {
   const [quickViewProduct, setQuickViewProduct] = useState<any>(null);
   const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+  const [wishlist, setWishlist] = useState<string[]>([]);
+  const [showWishlistOnly, setShowWishlistOnly] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [products, setProducts] = useState<any[]>([]);
@@ -150,6 +152,38 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState<'catalog' | 'admin' | 'encyclopedia'>('catalog');
   const [noaTrigger, setNoaTrigger] = useState<any>(null);
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+
+  // Load wishlist from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('saban_wishlist');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setWishlist(parsed);
+      }
+    } catch (e) {
+      console.error('Failed to parse wishlist from localStorage:', e);
+    }
+  }, []);
+
+  const toggleWishlist = (productIdOrSku: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const targetKey = String(productIdOrSku);
+    setWishlist((prev) => {
+      let updated: string[];
+      if (prev.includes(targetKey)) {
+        updated = prev.filter((id) => id !== targetKey);
+      } else {
+        updated = [...prev, targetKey];
+      }
+      try {
+        localStorage.setItem('saban_wishlist', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Failed to save wishlist:', err);
+      }
+      return updated;
+    });
+  };
 
   // Vercel Deployment Shield Health Log
   useEffect(() => {
@@ -249,12 +283,14 @@ export default function Home() {
   };
 
   const filteredProducts = products.filter(p => {
+    const key = String(p.id || p.sku);
+    const matchesWishlist = showWishlistOnly ? wishlist.includes(key) || wishlist.includes(String(p.sku)) || wishlist.includes(String(p.id)) : true;
     const matchesCategory = activeCategory ? p.category === activeCategory : true;
     const matchesBrand = activeBrand ? p.brand === activeBrand : true;
     const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.id.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesCategory && matchesBrand && matchesSearch;
+                          (p.description && p.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
+                          (p.id && String(p.id).toLowerCase().includes(searchQuery.toLowerCase()));
+    return matchesWishlist && matchesCategory && matchesBrand && matchesSearch;
   });
 
   const [portalMetadata, setPortalMetadata] = useState<{ originSku: string; mediaId?: string } | null>(null);
@@ -366,6 +402,7 @@ export default function Home() {
       <Navbar 
         onCategorySelect={(cat) => {
           setActiveCategory(cat === activeCategory ? null : cat);
+          setShowWishlistOnly(false);
           setSearchQuery(''); 
         }} 
         onBrandSelect={(brand) => {
@@ -376,11 +413,18 @@ export default function Home() {
         activeBrand={activeBrand}
         categories={categories}
         brands={brands}
+        wishlistCount={wishlist.length}
+        showWishlistOnly={showWishlistOnly}
+        onWishlistToggle={() => {
+          setShowWishlistOnly(prev => !prev);
+          setActiveCategory(null);
+        }}
         onLogoClick={() => {
           setActiveCategory(null);
           setActiveBrand(null);
           setSelectedProduct(null);
           setSearchQuery('');
+          setShowWishlistOnly(false);
         }}
         onAdminEnter={() => setCurrentPage('admin')}
         onEncyclopediaEnter={() => setCurrentPage('encyclopedia')}
@@ -432,7 +476,7 @@ export default function Home() {
                </div>
                
                <p className="max-w-3xl mx-auto font-inter text-base md:text-[16px] text-[#64748b] leading-relaxed px-4 text-center">
-                 ח.סבן חומרי בניין מספקת פתרונות מתקדמים ומקצועיים לענפי הבנייה והשיפוצים מאז 1970. אנו מחויבים לאיכות ללא פשרות, שירות אישי וליווי טכני צמוד לכל לקוח.
+                  ח.סבן חומרי בניין מספקת פתרונות מתקדמים ומקצועיים לענפי הבנייה והשיפוצים מאז 1970. אנו מחויבים לאיכות ללא פשרות, שירות אישי וליווי טכני צמוד לכל לקוח.
                </p>
 
                <div className="flex flex-wrap justify-center gap-3 mt-8">
@@ -448,6 +492,55 @@ export default function Home() {
                </div>
             </motion.div>
           )}
+        </div>
+
+        {/* Filter Bar */}
+        <div className="flex flex-wrap items-center justify-center gap-2.5 mb-10">
+          <button
+            onClick={() => {
+              setActiveCategory(null);
+              setShowWishlistOnly(false);
+            }}
+            className={`px-5 py-2.5 rounded-full text-xs font-black transition-all border ${
+              !activeCategory && !showWishlistOnly
+                ? 'bg-saban-gold text-black border-saban-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]'
+                : 'bg-white/5 border-white/10 text-current/70 hover:border-saban-gold/40 hover:text-current'
+            }`}
+          >
+            כל המוצרים ({products.length})
+          </button>
+
+          <button
+            onClick={() => {
+              setShowWishlistOnly(!showWishlistOnly);
+              setActiveCategory(null);
+            }}
+            className={`px-5 py-2.5 rounded-full text-xs font-black transition-all border flex items-center gap-2 ${
+              showWishlistOnly
+                ? 'bg-rose-500 text-white border-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.4)]'
+                : 'bg-white/5 border-white/10 text-current/70 hover:border-rose-400 hover:text-rose-400'
+            }`}
+          >
+            <Heart size={14} className={wishlist.length > 0 || showWishlistOnly ? 'fill-current' : ''} />
+            <span>מוצרים שאהבתי ({wishlist.length})</span>
+          </button>
+
+          {categories.map((cat) => (
+            <button
+              key={cat.id || cat.name}
+              onClick={() => {
+                setActiveCategory(activeCategory === cat.name ? null : cat.name);
+                setShowWishlistOnly(false);
+              }}
+              className={`px-5 py-2.5 rounded-full text-xs font-black transition-all border ${
+                activeCategory === cat.name && !showWishlistOnly
+                  ? 'bg-saban-gold text-black border-saban-gold shadow-[0_0_15px_rgba(212,175,55,0.3)]'
+                  : 'bg-white/5 border-white/10 text-current/70 hover:border-saban-gold/40 hover:text-current'
+              }`}
+            >
+              {cat.name}
+            </button>
+          ))}
         </div>
 
         {/* Product Grid */}
@@ -477,62 +570,89 @@ export default function Home() {
           ) : filteredProducts.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               <AnimatePresence mode="popLayout">
-                {filteredProducts.map((product, idx) => (
-                  <motion.div
-                    layout
-                    key={`${product.id || product.sku || 'product'}-${idx}`}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="group cursor-pointer relative"
-                    onClick={() => setSelectedProduct(product)}
-                  >
-                    <div className="relative aspect-[4/5] overflow-hidden rounded-3xl glass-card transition-all duration-500 group-hover:border-saban-gold/30">
-                      <div className="absolute top-6 right-6 z-10 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                         <button 
+                {filteredProducts.map((product, idx) => {
+                  const itemKey = String(product.id || product.sku);
+                  const isWishlisted = wishlist.includes(itemKey) || wishlist.includes(String(product.sku)) || wishlist.includes(String(product.id));
+
+                  return (
+                    <motion.div
+                      layout
+                      key={`${product.id || product.sku || 'product'}-${idx}`}
+                      initial={{ opacity: 0, y: 50 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true, amount: 0.12 }}
+                      transition={{ 
+                        duration: 0.55, 
+                        delay: (idx % 3) * 0.08,
+                        ease: [0.21, 0.47, 0.32, 0.98]
+                      }}
+                      className="group cursor-pointer relative"
+                      onClick={() => setSelectedProduct(product)}
+                    >
+                      <div className="relative aspect-[4/5] overflow-hidden rounded-3xl glass-card transition-all duration-500 group-hover:border-saban-gold/30">
+                        {/* Action Buttons: Wishlist Heart & Quick View */}
+                        <div className="absolute top-6 right-6 z-10 flex items-center gap-2">
+                          <motion.button 
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.85 }}
+                            onClick={(e) => toggleWishlist(itemKey, e)}
+                            className={`p-3 rounded-full backdrop-blur-xl border transition-all shadow-xl ${
+                              isWishlisted 
+                                ? 'bg-rose-500/20 border-rose-500 text-rose-500 shadow-[0_0_15px_rgba(244,63,94,0.4)] opacity-100' 
+                                : 'bg-black/60 border-white/20 text-white hover:border-rose-400 hover:text-rose-400 opacity-90 group-hover:opacity-100'
+                            }`}
+                            title={isWishlisted ? "הסר ממועדפים" : "הוסף למועדפים"}
+                          >
+                            <Heart size={20} className={isWishlisted ? "fill-rose-500 text-rose-500" : ""} />
+                          </motion.button>
+
+                          <motion.button 
+                            whileHover={{ scale: 1.15 }}
+                            whileTap={{ scale: 0.85 }}
                             onClick={(e) => handleQuickView(product, e)}
-                            className="bg-black/60 backdrop-blur-xl border border-white/20 p-4 rounded-full text-white hover:bg-saban-gold hover:text-black hover:border-saban-gold transition-all shadow-xl"
-                         >
-                            <Box size={24} />
-                         </button>
-                      </div>
-
-                      <ProductCardImage 
-                        src={product.imageUrl} 
-                        alt={product.name}
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                      
-                      {product.stock <= 0 && (
-                        <div className="absolute top-6 left-6 bg-rose-600 text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">
-                          אזל מהמלאי
+                            className="bg-black/60 backdrop-blur-xl border border-white/20 p-3 rounded-full text-white hover:bg-saban-gold hover:text-black hover:border-saban-gold transition-all shadow-xl opacity-90 group-hover:opacity-100"
+                            title="תצוגה מהירה"
+                          >
+                            <Box size={20} />
+                          </motion.button>
                         </div>
-                      )}
 
-                      <div className="absolute bottom-0 right-0 left-0 p-8 text-right">
-                        <div className="flex justify-between items-end mb-2">
-                          <span className="text-saban-gold text-xs font-black uppercase tracking-widest drop-shadow-md">
-                            {product.category}
-                          </span>
-                          {product.price > 0 && (
-                            <span className="text-white text-lg font-black drop-shadow-md">
-                              ₪{product.price}
+                        <ProductCardImage 
+                          src={product.imageUrl} 
+                          alt={product.name}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                        
+                        {product.stock <= 0 && (
+                          <div className="absolute top-6 left-6 bg-rose-600 text-white px-4 py-1 rounded-full text-xs font-black uppercase tracking-widest shadow-lg">
+                            אזל מהמלאי
+                          </div>
+                        )}
+
+                        <div className="absolute bottom-0 right-0 left-0 p-8 text-right">
+                          <div className="flex justify-between items-end mb-2">
+                            <span className="text-saban-gold text-xs font-black uppercase tracking-widest drop-shadow-md">
+                              {product.category}
+                            </span>
+                            {product.price > 0 && (
+                              <span className="text-white text-lg font-black drop-shadow-md">
+                                ₪{product.price}
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="text-3xl font-serif text-white group-hover:text-saban-gold transition-colors font-bold drop-shadow-lg">
+                            {product.name}
+                          </h3>
+                          {product.stock > 0 && product.stock < 10 && (
+                            <span className="text-rose-400 text-xs mt-2 block font-black drop-shadow-sm">
+                              נותרו {product.stock} יחידות בלבד!
                             </span>
                           )}
                         </div>
-                        <h3 className="text-3xl font-serif text-white group-hover:text-saban-gold transition-colors font-bold drop-shadow-lg">
-                          {product.name}
-                        </h3>
-                        {product.stock > 0 && product.stock < 10 && (
-                          <span className="text-rose-400 text-xs mt-2 block font-black drop-shadow-sm">
-                            נותרו {product.stock} יחידות בלבד!
-                          </span>
-                        )}
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
           ) : (
