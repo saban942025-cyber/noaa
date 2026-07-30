@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Assistant", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-inter: "Inter", sans-serif;
+  
+  --color-saban-gold: #D4AF37;
+  --color-saban-black: #020617;
+  --color-saban-ivory: #FDFCF0;
+
+  /* Custom Transitions */
+  --transition-theme: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+@layer base {
+  :root {
+    --glass-bg: rgba(255, 255, 255, 0.5);
+    --glass-border: rgba(197, 160, 89, 0.3);
+    --glass-text: #0f172a;
+    --glass-accent: #c5a059;
+    --page-bg: #f8fafc;
+    --glass-shadow: rgba(0, 0, 0, 0.05);
+    --text-depth: 0 1px 2px rgba(15, 23, 42, 0.1);
+  }
+
+  :root.dark {
+    --glass-bg: rgba(15, 23, 42, 0.7);
+    --glass-border: rgba(197, 160, 89, 0.2);
+    --glass-text: #f8fafc;
+    --glass-accent: #f59e0b;
+    --page-bg: #020617;
+    --glass-shadow: rgba(0, 0, 0, 0.4);
+    --text-depth: none;
+  }
+
+  html {
+    direction: rtl;
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply selection:bg-saban-gold selection:text-black font-sans transition-[var(--transition-theme)];
+    background-color: var(--page-bg);
+    color: var(--glass-text);
+    text-shadow: var(--text-depth);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-serif;
+  }
+}
+
+@utility glass-porcelain {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 8px 32px 0 var(--glass-shadow);
+  color: var(--glass-text);
+  pointer-events: auto;
+  @apply transition-all duration-300;
+}
+
+.glass-card {
+  @apply glass-porcelain;
+  border: 1px solid rgba(197, 160, 89, 0.4);
+}
+
+.glass-morphism {
+  @apply glass-porcelain;
+}
+
+.rtl {
+  direction: rtl;
+}

@@ -1,0 +1,154 @@
+{
+  "entities": {
+    "product": {
+      "title": "Product",
+      "description": "Building material product in the catalog.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Display name of the product." },
+        "description": { "type": "string", "description": "Detailed description of the product." },
+        "category": { "type": "string", "description": "Product category (e.g., Cement, Paint)." },
+        "specs": {
+          "type": "object",
+          "description": "Technical specifications.",
+          "properties": {
+            "dryingTime": { "type": "string" },
+            "coverage": { "type": "string" },
+            "applicationMethod": { "type": "string" },
+            "waitBetweenCoats": { "type": "string" }
+          }
+        },
+        "multimedia": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of YouTube tutorial URLs."
+        },
+        "relationships": {
+          "type": "object",
+          "properties": {
+            "upsells": { "type": "array", "items": { "type": "string" } },
+            "complementary": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "images": { "type": "array", "items": { "type": "string", "format": "uri" }, "description": "Additional product images for carousel." },
+        "price": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category"]
+    },
+    "category": {
+      "title": "Category",
+      "description": "Product categories.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "slug": { "type": "string" }
+      },
+      "required": ["name", "slug"]
+    },
+    "chatMessage": {
+      "title": "Chat Message",
+      "description": "Message in Noa AI assistant chat.",
+      "type": "object",
+      "properties": {
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["role", "content", "timestamp"]
+    },
+    "encyclopediaItem": {
+      "title": "Encyclopedia Item",
+      "description": "Professional technical content, presentations, and tutorials.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "type": { "type": "string", "enum": ["slide", "video", "article"] },
+        "url": { "type": "string" },
+        "presentationUrl": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "brandId": { "type": "string" },
+        "description": { "type": "string" },
+        "associatedSku": { "type": "string" },
+        "associatedSkus": { "type": "array", "items": { "type": "string" } },
+        "linkedProductSKUs": { "type": "array", "items": { "type": "string" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "type", "url", "categoryId"]
+    },
+    "brand": {
+      "title": "Brand",
+      "description": "Product brands/manufacturers.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "logo": { "type": "string" },
+        "description": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "encyclopediaCategory": {
+      "title": "Encyclopedia Category",
+      "description": "Categories for the Saban-Pedia encyclopedia.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "order": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name"]
+    },
+    "aiLog": {
+      "title": "AI Conversation Log",
+      "description": "Logs of conversations with Noa AI.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userEmail": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "messages": { 
+          "type": "array", 
+          "items": { "$ref": "#/entities/chatMessage" } 
+        }
+      },
+      "required": ["timestamp"]
+    }
+  },
+  "firestore": {
+    "inventory": {
+      "schema": "product",
+      "description": "Live inventory collection for Saban Building Materials."
+    },
+    "categories": {
+      "schema": "category",
+      "description": "Categories for product filtering."
+    },
+    "brands": {
+      "schema": "brand",
+      "description": "Product brands/manufacturers."
+    },
+    "Noa_AI_Logs": {
+      "schema": "aiLog",
+      "description": "Conversation logs with Noa AI."
+    },
+    "chats/{chatId}/messages": {
+      "schema": "chatMessage",
+      "description": "Messages for a specific chat session."
+    },
+    "encyclopedia_categories": {
+      "schema": "encyclopediaCategory",
+      "description": "Main categories for the Saban-Pedia encyclopedia."
+    },
+    "encyclopedia_items": {
+      "schema": "encyclopediaItem",
+      "description": "Specific media/knowledge items in the encyclopedia."
+    }
+  }
+}

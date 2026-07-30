@@ -1,0 +1,17 @@
+{
+  "name": "ח.סבן חומרי בניין",
+  "short_name": "ח.סבן",
+  "description": "קטלוג מוצרי בניין וייעוץ מקצועי מבוסס AI",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#c5a059",
+  "icons": [
+    {
+      "src": "https://i.postimg.cc/G20PxSVq/Gemini-Generated-Image-gmd5k7gmd5k7gmd5.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

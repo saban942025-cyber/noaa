@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- Helpers ---
+    function isSignedIn() { return request.auth != null; }
+    function isEmailVerified() { return isSignedIn() && request.auth.token.email_verified == true; }
+    function isAdmin() {
+      return isEmailVerified() && (
+        request.auth.token.email == 'saban942025@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // --- Validation Helpers ---
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'category']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 250 &&
+             data.category is string;
+    }
+    function isValidCategory(data) {
+      return data.keys().hasAll(['name']) && data.name is string && data.name.size() > 0;
+    }
+    function isValidBrand(data) {
+      return data.keys().hasAll(['name']) && data.name is string && data.name.size() > 0;
+    }
+    function isValidEncItem(data) {
+      return data.keys().hasAll(['title', 'type', 'categoryId']) &&
+             data.title is string && data.type is string;
+    }
+    function isValidEncCategory(data) {
+      return data.keys().hasAll(['name']) && data.name is string && data.name.size() > 0;
+    }
+    function isValidLog(data) {
+      return data.keys().hasAll(['timestamp']);
+    }
+
+    // --- Collection Rules ---
+
+    match /inventory/{productId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming());
+      allow update: if isAdmin() && isValidProduct(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /categories/{catId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(catId) && isValidCategory(incoming());
+      allow update: if isAdmin() && isValidCategory(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /brands/{brandId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(brandId) && isValidBrand(incoming());
+      allow update: if isAdmin() && isValidBrand(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /encyclopedia_categories/{catId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(catId) && isValidEncCategory(incoming());
+      allow update: if isAdmin() && isValidEncCategory(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /encyclopedia_items/{itemId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(itemId) && isValidEncItem(incoming());
+      allow update: if isAdmin() && isValidEncItem(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /Noa_AI_Logs/{logId} {
+      allow create: if isValidId(logId) && isValidLog(incoming());
+      allow read, delete: if isAdmin();
+    }
+
+    // Admins
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+    
+    // Chats
+    match /chats/{chatId} {
+      allow read, write: if isAdmin();
+      match /messages/{msgId} {
+        allow create: if isValidId(msgId);
+        allow read: if isAdmin();
+      }
+    }
+
+    // Catch-all (Must be last or redundant if all above are defined)
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}

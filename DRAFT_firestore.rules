@@ -1,0 +1,136 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    function isAdmin() {
+      return isEmailVerified() && (
+        request.auth.token.email == 'saban942025@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Validation Blueprints ---
+    function isValidProduct(data) {
+      return data.keys().hasAll(['name', 'category']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.category is string && data.category.size() > 0 &&
+             (!('price' in data) || data.price is number) &&
+             (!('description' in data) || data.description is string) &&
+             (!('currentStock' in data) || data.currentStock is number) &&
+             (!('id' in data) || data.id is string) &&
+             (!('updatedAt' in data) || data.updatedAt == request.time);
+    }
+    function isValidCategory(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('icon' in data) || data.icon is string) &&
+             (!('image' in data) || data.image is string) &&
+             (!('updatedAt' in data) || data.updatedAt == request.time);
+    }
+    function isValidBrand(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             (!('logo' in data) || data.logo is string) &&
+             (!('description' in data) || data.description is string) &&
+             (!('updatedAt' in data) || data.updatedAt == request.time);
+    }
+    function isValidEncItem(data) {
+      return data.keys().hasAll(['title', 'type', 'url', 'categoryId']) &&
+             data.title is string && data.title.size() > 0 &&
+             data.type in ['slide', 'video', 'article'] &&
+             data.url is string && data.url.size() > 0 &&
+             data.categoryId is string &&
+             (!('updatedAt' in data) || data.updatedAt == request.time) &&
+             exists(/databases/$(database)/documents/encyclopedia_categories/$(data.categoryId));
+    }
+    function isValidEncCategory(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() > 0 &&
+             (!('updatedAt' in data) || data.updatedAt == request.time);
+    }
+    function isValidLog(data) {
+      return data.keys().hasAll(['timestamp']) &&
+             data.timestamp == request.time;
+    }
+
+    // --- Collections ---
+
+    match /inventory/{productId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming());
+      allow update: if isAdmin() && isValidProduct(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly([
+                      'name', 'ProductName', 'category', 'price', 'description', 
+                      'currentStock', 'imageUrl', 'imageUrl2', 'videoUrl', 'brand', 
+                      'sku', 'specs', 'updatedAt', 'id', 'multimedia', 'relationships', 'images'
+                    ]);
+      allow delete: if isAdmin();
+    }
+
+    match /categories/{catId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(catId) && isValidCategory(incoming());
+      allow update: if isAdmin() && isValidCategory(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'icon', 'image', 'updatedAt', 'id', 'description', 'slug']);
+      allow delete: if isAdmin();
+    }
+
+    match /brands/{brandId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(brandId) && isValidBrand(incoming());
+      allow update: if isAdmin() && isValidBrand(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'logo', 'description', 'updatedAt', 'id']);
+      allow delete: if isAdmin();
+    }
+
+    match /encyclopedia_categories/{catId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(catId) && isValidEncCategory(incoming());
+      allow update: if isAdmin() && isValidEncCategory(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['name', 'description', 'icon', 'order', 'updatedAt']);
+      allow delete: if isAdmin();
+    }
+
+    match /encyclopedia_items/{itemId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(itemId) && isValidEncItem(incoming());
+      allow update: if isAdmin() && isValidEncItem(incoming()) &&
+                    incoming().diff(existing()).affectedKeys().hasOnly([
+                      'title', 'type', 'url', 'categoryId', 'description', 
+                      'associatedSku', 'updatedAt', 'originalOrder', 'mediaUrl'
+                    ]);
+      allow delete: if isAdmin();
+    }
+
+    match /Noa_AI_Logs/{logId} {
+      allow create: if isValidId(logId) && isValidLog(incoming());
+      allow read, delete: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isAdmin();
+      allow write: if false; // Only manageable through Firebase Console or by existing admin? 
+      // Actually per requirement 'Admin authority comes from admins collection or allowlist'.
+    }
+  }
+}
