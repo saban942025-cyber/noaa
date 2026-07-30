@@ -38,6 +38,8 @@ interface ProductDetailProps {
   product: Product;
   onBack: () => void;
   onNavigateToProduct?: (sku: string) => void;
+  onNextProduct?: () => void;
+  onPrevProduct?: () => void;
 }
 
 const ProductImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
@@ -110,10 +112,45 @@ const RelatedProductCard: React.FC<{ product: Product; onClick?: (sku: string) =
   );
 };
 
-export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, onNavigateToProduct }) => {
+export const ProductDetail: React.FC<ProductDetailProps> = ({ 
+  product, 
+  onBack, 
+  onNavigateToProduct,
+  onNextProduct,
+  onPrevProduct 
+}) => {
   const inputType = useInputType();
   const [relatedProducts, setRelatedProducts] = React.useState<{ complementary: Product[]; upsells: Product[] }>({ complementary: [], upsells: [] });
   const [isLoadingRelated, setIsLoadingRelated] = React.useState(true);
+
+  // Swipe Gesture Handling for Mobile
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+    // Minimum horizontal swipe distance of 45px, horizontal slope > 1.2
+    if (Math.abs(deltaX) > 45 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      if (deltaX < 0) {
+        // Swiped Left -> Go to Next Product
+        onNextProduct?.();
+      } else {
+        // Swiped Right -> Go to Prev Product
+        onPrevProduct?.();
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
 
   // Fetch related products
   React.useEffect(() => {
@@ -194,10 +231,33 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
-      className="min-h-screen transition-[var(--transition-theme)] pt-28 pb-32 rtl text-right" 
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      className="min-h-screen transition-[var(--transition-theme)] pt-28 pb-32 rtl text-right relative select-none" 
       dir="rtl"
       style={{ backgroundColor: 'var(--page-bg)', color: 'var(--glass-text)' }}
     >
+      {/* Floating Side Arrows for Desktop/Tablet */}
+      {onPrevProduct && (
+        <button
+          onClick={onPrevProduct}
+          className="hidden md:flex fixed right-4 top-1/2 -translate-y-1/2 z-40 p-3 bg-black/60 hover:bg-saban-gold text-white hover:text-black rounded-full backdrop-blur-md border border-white/20 shadow-2xl transition-all"
+          title="מוצר קודם"
+        >
+          <ChevronRight size={24} />
+        </button>
+      )}
+
+      {onNextProduct && (
+        <button
+          onClick={onNextProduct}
+          className="hidden md:flex fixed left-4 top-1/2 -translate-y-1/2 z-40 p-3 bg-black/60 hover:bg-saban-gold text-white hover:text-black rounded-full backdrop-blur-md border border-white/20 shadow-2xl transition-all"
+          title="מוצר הבא"
+        >
+          <ChevronLeft size={24} />
+        </button>
+      )}
+
       {/* PROFESSIONAL TRAINING FAB / SHIMMER BUTTON */}
       <AnimatePresence>
         {hasProfessionalMedia && (
@@ -210,8 +270,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               whileHover={{ scale: 1.05, y: -5 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => {
-                // Trigger "Portal" effect via Noa or state change in App.tsx
-                // For now, we'll use a smooth navigation to encyclopedia with query param
                 const targetMedia = discoveredMedia[0] || { type: product.presentationId ? 'slide' : 'video', url: product.tutorialUrl };
                 window.dispatchEvent(new CustomEvent('portal-navigation', { 
                   detail: { type: 'encyclopedia', productSku: product.sku, mediaId: targetMedia?.id } 
@@ -219,7 +277,6 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
               }}
               className="relative group overflow-hidden px-8 py-4 bg-saban-gold rounded-full shadow-[0_15px_40px_rgba(197,160,89,0.4)] flex items-center gap-3 border-2 border-white/20"
             >
-              {/* Shimmer Effect */}
               <motion.div 
                 animate={{ 
                   left: ['-100%', '200%']
@@ -240,6 +297,31 @@ export const ProductDetail: React.FC<ProductDetailProps> = ({ product, onBack, o
       </AnimatePresence>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Mobile Swipe Navigation Toolbar */}
+        {(onNextProduct || onPrevProduct) && (
+          <div className="flex items-center justify-between mb-6 bg-white/5 border border-white/10 p-2.5 rounded-2xl md:hidden">
+            <button
+              onClick={onPrevProduct}
+              disabled={!onPrevProduct}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-saban-gold/10 text-saban-gold font-bold text-xs hover:bg-saban-gold hover:text-black transition-all disabled:opacity-30"
+            >
+              <ChevronRight size={16} />
+              <span>הקודם</span>
+            </button>
+            <div className="text-[11px] text-current/60 font-medium flex items-center gap-1 dir-rtl">
+              <span>← החלק שמאלה/ימינה למעבר →</span>
+            </div>
+            <button
+              onClick={onNextProduct}
+              disabled={!onNextProduct}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-saban-gold/10 text-saban-gold font-bold text-xs hover:bg-saban-gold hover:text-black transition-all disabled:opacity-30"
+            >
+              <span>הבא</span>
+              <ChevronLeft size={16} />
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-between items-center mb-8">
           <button 
             onClick={onBack} 

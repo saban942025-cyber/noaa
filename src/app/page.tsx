@@ -311,6 +311,23 @@ export default function Home() {
   }
 
   if (selectedProduct) {
+    const productList = filteredProducts.length > 0 ? filteredProducts : products;
+    const currentIndex = productList.findIndex(p => p.id === selectedProduct.id || p.sku === selectedProduct.sku);
+
+    const handleNextProduct = () => {
+      if (productList.length === 0) return;
+      const nextIdx = (currentIndex + 1) % productList.length;
+      setSelectedProduct(productList[nextIdx]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const handlePrevProduct = () => {
+      if (productList.length === 0) return;
+      const prevIdx = (currentIndex - 1 + productList.length) % productList.length;
+      setSelectedProduct(productList[prevIdx]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     return (
       <>
         <AnimatePresence>
@@ -319,6 +336,8 @@ export default function Home() {
         <ProductDetail 
           product={selectedProduct} 
           onBack={() => setSelectedProduct(null)} 
+          onNextProduct={handleNextProduct}
+          onPrevProduct={handlePrevProduct}
           onNavigateToProduct={(sku) => {
             const p = products.find(prod => String(prod.sku) === sku || String(prod.id) === sku);
             if (p) {
@@ -544,6 +563,22 @@ export default function Home() {
         isOpen={isQuickViewOpen}
         onClose={() => setIsQuickViewOpen(false)}
         onAddToCart={handleAddToCart}
+        onNextProduct={() => {
+          if (!quickViewProduct) return;
+          const list = filteredProducts.length > 0 ? filteredProducts : products;
+          const idx = list.findIndex(p => p.id === quickViewProduct.id || p.sku === quickViewProduct.sku);
+          if (idx !== -1 && list.length > 0) {
+            setQuickViewProduct(list[(idx + 1) % list.length]);
+          }
+        }}
+        onPrevProduct={() => {
+          if (!quickViewProduct) return;
+          const list = filteredProducts.length > 0 ? filteredProducts : products;
+          const idx = list.findIndex(p => p.id === quickViewProduct.id || p.sku === quickViewProduct.sku);
+          if (idx !== -1 && list.length > 0) {
+            setQuickViewProduct(list[(idx - 1 + list.length) % list.length]);
+          }
+        }}
         onViewFullDetail={(id) => {
           const p = products.find(prod => prod.id === id);
           if (p) setSelectedProduct(p);

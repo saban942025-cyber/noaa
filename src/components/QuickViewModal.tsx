@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ShoppingBag, ArrowRight, Eye, Sparkles } from 'lucide-react';
+import { X, ShoppingBag, ArrowRight, Eye, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -20,6 +20,8 @@ interface QuickViewModalProps {
   onClose: () => void;
   onAddToCart: (product: Product) => void;
   onViewFullDetail: (id: string) => void;
+  onNextProduct?: () => void;
+  onPrevProduct?: () => void;
 }
 
 const ProductImage: React.FC<{ src: string; alt: string }> = ({ src, alt }) => {
@@ -46,8 +48,34 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
   isOpen, 
   onClose, 
   onAddToCart,
-  onViewFullDetail
+  onViewFullDetail,
+  onNextProduct,
+  onPrevProduct
 }) => {
+  const touchStartX = React.useRef<number | null>(null);
+  const touchStartY = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
+
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+      if (deltaX < 0) {
+        onNextProduct?.();
+      } else {
+        onPrevProduct?.();
+      }
+    }
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
+
   if (!product) return null;
 
   return (
@@ -70,7 +98,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-saban-black w-full max-w-4xl max-h-[90vh] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl pointer-events-auto flex flex-col md:flex-row relative"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+              className="bg-saban-black w-full max-w-4xl max-h-[90vh] rounded-[2rem] overflow-hidden border border-white/10 shadow-2xl pointer-events-auto flex flex-col md:flex-row relative select-none"
             >
               {/* Close Button */}
               <button 
@@ -79,6 +109,26 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({
               >
                 <X size={20} />
               </button>
+
+              {/* Prev/Next Navigation Controls */}
+              {onPrevProduct && (
+                <button
+                  onClick={onPrevProduct}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 z-30 p-2.5 bg-black/60 hover:bg-saban-gold text-white hover:text-black rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all"
+                  title="מוצר קודם"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              )}
+              {onNextProduct && (
+                <button
+                  onClick={onNextProduct}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 z-30 p-2.5 bg-black/60 hover:bg-saban-gold text-white hover:text-black rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-all"
+                  title="מוצר הבא"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              )}
 
               {/* Left: Image Section */}
               <div className="w-full md:w-1/2 aspect-square md:aspect-auto bg-white/5 relative group">
